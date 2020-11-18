@@ -67,9 +67,9 @@ onInit = function() {
     loadObject(
         "../obj/yoko/Yoko.obj", 
         "../obj/yoko/textures/EgbertTEX.png", 
-        function (obj) {
+        function (objects) {
 
-            yoko = obj.children[0];
+            yoko = objects.children[0];
 
             const rate = YokoSize;
             yoko.scale.set(rate, rate, rate);
@@ -87,7 +87,7 @@ onUpdate = function(deltaTime) {
 
     if (yoko != undefined) {
 
-        yoko.position.z += 0.0008 * deltaTime;
+        yoko.position.z += 0.005 * deltaTime;
     }
 };
 

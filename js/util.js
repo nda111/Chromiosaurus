@@ -8,7 +8,7 @@ function radian(degrees) {
 // Convert angle in radian to angle in degrees.
 function degrees(radian) {
 
-    return radian * 180.9 / Math.PI;
+    return radian * 180.0 / Math.PI;
 }
 
 // Load an .obj file with a texture in image format.
@@ -19,14 +19,14 @@ function loadObject(objectPath, texturePath, onLoad, onError) {
     texture.load(texturePath, 
         function (texture) { // On texture successfully loaded.
 
-        // in this example we create the material when the texture is loaded
+        // In this example we create the material when the texture is loaded
         const yokoMaterial = new THREE.MeshPhongMaterial({
             map: texture
         });
         loader.load(objectPath, 
-            function (object) { // On model successfully loaded.
+            function (objects) { // On model successfully loaded.
 
-            object.traverse(function (child) {
+            objects.traverse(function (child) {
 
                 // This allow us to check if the children is an instance of the Mesh constructor
                 if (child instanceof THREE.Mesh) {
@@ -35,7 +35,7 @@ function loadObject(objectPath, texturePath, onLoad, onError) {
                 }
             });
             
-            onLoad(object);
+            onLoad(objects);
         }, undefined, onError);
     }, undefined, onError);
 }
