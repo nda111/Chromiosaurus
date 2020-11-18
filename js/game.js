@@ -18,6 +18,7 @@ function startScene(width, height, fps = 60) {
     renderer = new THREE.WebGLRenderer({
         antialias: true,
     });
+    renderer.shadowMap.enabled = true;
     renderer.setSize(width, height);
     document.body.appendChild(renderer.domElement);
 

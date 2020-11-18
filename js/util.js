@@ -1,4 +1,16 @@
 
+// Convert angle in degrees to angle in radian.
+function radian(degrees) {
+
+    return degrees * Math.PI / 180.0;
+}
+
+// Convert angle in radian to angle in degrees.
+function degrees(radian) {
+
+    return radian * 180.9 / Math.PI;
+}
+
 // Load an .obj file with a texture in image format.
 function loadObject(objectPath, texturePath, onLoad, onError) {
 
