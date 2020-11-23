@@ -1,23 +1,127 @@
 
-const CanvasSizeRate = 0.6;
-const YokoSize = 0.007;
-const Colors = {
-    Sky: 0xFFE173,
-    Ground: 0xAD6E00,
-    Road: 0xD99E36,
+// #region 게임 설정값
+const MaxCoordZ = 100; // 그림자가 정상적으로 발생하는 범위. if (coord >= MaxCoord) coord -= MaxCoord;
+
+const CanvasSizeRate = 0.6; // 캔버스의 세로/가로 비율
+const Pallete = { // 게임에 사용되는 색상 리스트
+    Sky: { // 하늘 색
+        Day: 0xFFE173,    // 낮 하늘 색
+        Night: 0x0E1626,  // 밤 하늘 색
+    },
+    Light: { // 빛 색
+        Sun: 0xFFE173,      // 햇빛
+        Moon: 0xCCFFFF,     // 달빛
+        Flash: 0xFFFFFF,    // 조명
+    },
+    Ground: 0xAD6E00, // 길 외의 바닥 색
+    Road: 0xD99E36,   // 길 색
 };
-const CameraPosition = {
-    Theta: radian(240.0),
-    Distance: 5.0,
-    Height: 3.0,
-    FocusDistance: 10.0,
+const CameraPosition = { // 캐릭터에 상대적인 카메라 좌표를 설정하는 파라미터
+    Distance: 13.0,         // 카메라와 캐릭터 사이의 거리
+    Theta: radian(230.0),   // zx평면에 대한 극좌표
+    Phi: radian(40.0),      // (zx)y 평면에 대한 극좌표
+    FocusDistance: 10.0,    // lookAt(0, 0, FocusDistance)
+};
+const FlashLightSetup = { // 밤에 보이는 플래시라이트 좌표 설정
+    Offset: [0.0, 3.0, 1.0],        // 카메라에 상대적인 플래시라이트 좌표
+    TargetOffset: [0.0, -1.0, 1.0], // 플래시라이트에 상대적인 타겟 상대좌표
 };
 
-var light = undefined;
-var ground = undefined;
-var road = undefined;
-var yoko = undefined;
+var RunningDuration = -1; // 달리기 애니메이션 주기
 
+// #endregion
+ 
+// #region 전역 변수
+// three.js 오브젝트
+var sunLight = undefined;   // 빛 객체: PointLight
+var moonLight = undefined;  // 빛 객체: DirectionalLight
+var flashLight = undefined; // 빛 객체: SpotLight
+var ground = undefined; // 길이 아닌 바닥 객체: PlaneBufferGeometry
+var road = undefined;   // 길 객체: BoxGeometry
+var robot = { // 로봇 객체의 데이터 집합
+    model: undefined,       // 모델 그룹: Group
+    animations: undefined,  // 애니메이션 집합: Clip[]
+};
+var animationMixer = undefined; // 애니메이션 믹서
+var currentAction = undefined;  // 현재 실행 중인 애니메이션
+
+// 게임 플레이 관련
+var speed = 7; // 플레이어 달리기 속도 (1.0/초)
+var jumpTime = -Infinity; // 점프 시작 시간
+var jumpFlag = false; // true라면 점프 중, 아니라면 false
+var jumpDuration = 500; // 점프 지속 시간 (밀리초)
+
+// #endregion
+
+// #region 유틸리티 함수
+ /**
+  * 애니메이션을 자연스럽게 전환한다.
+  * @param {*} i 다음에 실행할 애니메이션의 인덱스
+  * @param {*} duration 애니메이션 fading 시간
+  */
+function fadeToAction(i, duration) {
+
+    const clip = robot.animations[i];
+
+    previousAction = currentAction;
+    currentAction = mixer.clipAction(clip);
+    currentAction.clampWhenFinished = true;
+
+    if (previousAction !== currentAction) {
+
+        // 애니메이션을 전환하는 경우, 이전 애니메이션을 부드럽게 종료
+        previousAction.fadeOut(duration);
+    }
+
+    // 새로운 애니메이션을 시작
+    currentAction
+        .reset() 
+        .setEffectiveTimeScale(1) 
+        .setEffectiveWeight(1)
+        .fadeIn(duration)
+        .play();
+}
+
+/**
+ * 그림자가 생성되는 범위를 벗어나지 않도록 좌표를 조정한다.
+ * 
+ * @param {*} pos 조정 이전의 좌표 값
+ */
+function loopPosition(pos) {
+
+    if (pos >= MaxCoordZ) {
+
+        return pos - MaxCoordZ;
+    } else {
+
+        return pos;
+    }
+}
+
+/**
+ * 점프할 때 시간에 따른 높이 값을 계산한다.
+ * 
+ * @param {*} time 점프 이벤트 이후 시간
+ */
+function getJumpHeight() {
+
+    const max_height = 5;
+    const duration_half = jumpDuration / 2.0;
+
+    const time = playTime - jumpTime;
+    if (time > jumpDuration) {
+
+        jumpFlag = false;
+        return 0;
+    }
+    
+    const sq = (time % jumpDuration) - duration_half;
+    return (-max_height * 4 / (jumpDuration * jumpDuration)) * sq * sq + max_height;
+}
+
+/**
+ * 윈도우 크기가 조정되면 캔버스 크기를 비율에 맞게 조정한다.
+ */
 onresize = function() {
 
     if (renderer != undefined) {
@@ -26,27 +130,81 @@ onresize = function() {
     }
 };
 
+/**
+ * 키보드가 눌렸을 때 발생하는 이벤트
+ */
+onkeydown = function(e) {
+
+    switch (e.code) {
+
+        case "Space": // 스페이스바를 누르면 점프함
+            if (jumpFlag == false) {
+
+                jumpTime = playTime; 
+            }
+            jumpFlag = true;
+            break;
+
+        default:
+            break;
+    }
+}
+
+//#endregion
+
+// #region 게임 이벤트
+/**
+ * 게임이 시작될 때 오브젝트를 초기화한다.
+ */
 onInit = function() {
 
     // Scene
-    scene.background = new THREE.Color(Colors.Sky);
+    scene.background = new THREE.Color(Pallete.Sky.Night);
 
     // Camera
+    const cosTheta = Math.cos(CameraPosition.Theta);
+    const sinTheta = Math.sin(CameraPosition.Theta);
+    const cosPhi = Math.cos(CameraPosition.Phi);
+    const sinPhi = Math.sin(CameraPosition.Phi);
     camera.position.set(
-        Math.cos(CameraPosition.Theta) * CameraPosition.Distance, 
-        CameraPosition.Height, 
-        Math.sin(CameraPosition.Theta) * CameraPosition.Distance);
+        CameraPosition.Distance * sinTheta * cosPhi,
+        CameraPosition.Distance * sinPhi, 
+        CameraPosition.Distance * cosTheta * cosPhi);
+    CameraPosition.z = camera.position.z;
     camera.lookAt(0, 0, CameraPosition.FocusDistance);
 
-    // Directional light
-    light = new THREE.DirectionalLight(Colors.Sky, 1.2);
-    light.castShadow = true; 
-    light.position.set(-10, 12, 0);
-    scene.add(light);
-    
+    // Point light: Sun
+    sunLight = new THREE.PointLight(Pallete.Light.Sun, 1.2);
+    sunLight.castShadow = true; 
+    sunLight.position.set(-10, 12, 0);
+    sunLight.shadow.camera.left = 0;
+    sunLight.shadow.camera.right = MaxCoordZ;
+    sunLight.shadow.camera.top = 10;
+    sunLight.shadow.camera.bottom = -10;
+    sunLight.shadow.mapSize.width = 2048;
+    scene.add(sunLight);
+
+    // Directional Light: Moon
+    moonLight = new THREE.DirectionalLight(Pallete.Light.Moon, 0.3);
+    moonLight.castShadow = true;
+    scene.add(moonLight);
+
+    // Spot Light: Flash
+    const lightPos = new THREE.Vector3(FlashLightSetup.Offset[0], FlashLightSetup.Offset[1], FlashLightSetup.Offset[2]);
+    const targetPos = new THREE.Vector3(lightPos.x, lightPos.y - 1.0, lightPos.z + 1.0);
+    flashLight = new THREE.SpotLight(Pallete.Light.Flash, 1.0);
+    flashLight.castShadow = true;
+    flashLight.position.set(lightPos.x, lightPos.y, lightPos.z);
+    flashLight.target.position.set(targetPos.x, targetPos.y, targetPos.z);
+    flashLight.angle = radian(55);
+    console.log(flashLight.distance); 
+    flashLight.distance = 60.0;
+    scene.add(flashLight);
+    scene.add(flashLight.target);
+     
     // Ground
     var groundGeometry = new THREE.PlaneBufferGeometry(10000, 10000, 8, 8);
-    var groundMaterial = new THREE.MeshPhongMaterial({ color: Colors.Ground });
+    var groundMaterial = new THREE.MeshPhongMaterial({ color: Pallete.Ground });
     ground = new THREE.Mesh(groundGeometry, groundMaterial);
     ground.rotateX(Math.PI / -2.0);
     ground.castShadow = true; //default is false
@@ -54,41 +212,109 @@ onInit = function() {
     scene.add(ground);
     
     // Road
-    var roadGeometry = new THREE.BoxGeometry(5, 10000, 0.2);
-    var roadMaterial = new THREE.MeshPhongMaterial({ color: Colors.Road });
+    var roadGeometry = new THREE.BoxGeometry(10, 10000, 0.2);
+    var roadMaterial = new THREE.MeshPhongMaterial({ color: Pallete.Road });
     road = new THREE.Mesh(roadGeometry, roadMaterial);
     road.castShadow = true; //default is false
     road.receiveShadow = true; //default     
     road.rotation.set(Math.PI / -2.0, 0, 0);
-
     scene.add(road);
 
-    // Yoko
-    loadObject(
-        "../obj/yoko/Yoko.obj", 
-        "../obj/yoko/textures/EgbertTEX.png", 
-        function (objects) {
+    // Robot
+    loadGLB("../obj/robot.glb", 
+        function (gltf) {
 
-            yoko = objects.children[0];
+            robot.model = gltf.scene;
+            robot.animations = gltf.animations;
 
-            const rate = YokoSize;
-            yoko.scale.set(rate, rate, rate);
-            yoko.rotation.set(0, Math.PI / 2, 0);
-            yoko.position.set(0.5, 0, 0);
+            robot.model.traverse(function (child) {
 
-            yoko.castShadow = true;
-            yoko.receiveShadow = true;
+                if (child instanceof THREE.Mesh) {
 
-            scene.add(yoko);
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+            
+            const clip = robot.animations[6]; // 달리기 애니메이션
+            RunningDuration = clip.duration;
+            animationMixer = new THREE.AnimationMixer(robot.model);
+            currentAction = animationMixer.clipAction(clip);
+            currentAction.clampWhenFinished = true;
+            currentAction.play();
+
+            scene.add(robot.model);
+        }, function (error) {
+
+            console.log(error);
         });
 }
 
+/**
+ * 프레임마다 오브젝트를 업데이트한다.
+ * 
+ * @param {*} deltaTime 이전 프레임 이후 지난 시간 (초)
+ */
 onUpdate = function(deltaTime) {
 
-    if (yoko != undefined) {
+    if (animationMixer) {
 
-        yoko.position.z += 0.005 * deltaTime;
+        // 애니메이션이 있다면 업데이트
+        animationMixer.update(deltaTime);
     }
+
+    // 플레이어의 위치
+    const yPos = getJumpHeight();
+    const zPos = loopPosition(speed * deltaTime + robot.model.position.z);
+
+    // 플레이어의 yz좌표 업데이트
+    robot.model.position.z = zPos;
+    robot.model.position.y = yPos;
+
+    // 카메라 z좌표 업데이트
+    camera.position.z = zPos + CameraPosition.z;
+
+    // 태양 각위치 계산
+    const theta = zPos * Math.PI * 2 / MaxCoordZ;
+
+    // 태양 직교좌표 계산, 업데이트
+    sunLight.position.set(
+        30 * Math.cos(theta),
+        30 * Math.sin(theta),
+        camera.position.z + 30);
+
+    if (zPos > MaxCoordZ / 2.0) { // 밤에만 플래시라이트 보임
+
+        // 플래시라이트 좌표 계산, 업데이트
+        const lightPos = [
+            FlashLightSetup.Offset[0], 
+            FlashLightSetup.Offset[1] + yPos, 
+            FlashLightSetup.Offset[2] + zPos];
+        const targetPos = [
+            lightPos[0] + FlashLightSetup.TargetOffset[0], 
+            lightPos[1] + FlashLightSetup.TargetOffset[1], 
+            lightPos[2] + FlashLightSetup.TargetOffset[2]];
+        flashLight.position.set(lightPos[0], lightPos[1], lightPos[2]);
+        flashLight.target.position.set(targetPos[0], targetPos[1], targetPos[2]);
+    } else { // 낮에는 안 보임
+
+        flashLight.position.set(0, -1, 0);
+    }
+
+    // 배경 색 계산, 업데이트
+    let rate = 0;
+    if (zPos < MaxCoordZ / 2.0) {
+
+        rate = Math.sin(zPos * Math.PI * 2 / MaxCoordZ);
+    }
+    scene.background = new THREE.Color(mixColor(
+        Pallete.Sky.Day,
+        Pallete.Sky.Night,
+        rate
+    ));
 };
 
+// #endregion
+
+// 캔버스에 그리기 작업을 시작한다.
 startScene(window.innerWidth, window.innerWidth * CanvasSizeRate);
