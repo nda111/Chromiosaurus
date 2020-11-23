@@ -197,7 +197,6 @@ onInit = function() {
     flashLight.position.set(lightPos.x, lightPos.y, lightPos.z);
     flashLight.target.position.set(targetPos.x, targetPos.y, targetPos.z);
     flashLight.angle = radian(55);
-    console.log(flashLight.distance); 
     flashLight.distance = 60.0;
     scene.add(flashLight);
     scene.add(flashLight.target);
