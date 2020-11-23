@@ -20,9 +20,9 @@ var onUpdate = undefined; // 프레임마다 오브젝트를 업데이트한다.
 /**
  * 캔버스에 그리기 작업을 시작한다.
  * 
- * @param {*} width 캔버스의 가로 크기
- * @param {*} height 캔버스의 세로 크기
- * @param {*} fps 1초 당 렌더링 횟수
+ * @param {number} width 캔버스의 가로 크기
+ * @param {number} height 캔버스의 세로 크기
+ * @param {number} fps 1초 당 렌더링 횟수
  */
 function startScene(width, height, fps = 60) {
 
@@ -74,7 +74,7 @@ function onFrame() {
 /**
  * frame rate을 적용한다
  * 
- * @param {*} fps 초당 렌더링 횟수
+ * @param {number} fps 초당 렌더링 횟수
  */
 function setFrameRate(fps) {
 

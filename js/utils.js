@@ -1,22 +1,30 @@
 
-// Convert angle in degrees to angle in radian.
+/**
+ * 60분법 각을 라디안 각으로 변환한다.
+ * 
+ * @param {number} degrees 60분법 각도
+ */
 function radian(degrees) {
 
     return degrees * Math.PI / 180.0;
 }
 
-// Convert angle in radian to angle in degrees.
+/**
+ * 라디안 각을 60분법 각으로 변환한다.
+ * 
+ * @param {number} radian 라디안 각도
+ */
 function degrees(radian) {
 
     return radian * 180.0 / Math.PI;
 }
 
 /**
- * Mix the two color with their ratio.
+ * 두 개의 색을 {c1} : {c2} = {rate} : {1-rate} 비율로 섞는다
  * 
- * @param {*} c1 
- * @param {*} c2 
- * @param {*} rate 
+ * @param {number} c1 첫 번째 색상 (0xRRGGBB)
+ * @param {number} c2 두 번째 색상 (0xRRGGBB)
+ * @param {number} rate 첫 번째 색상의 혼합 비율
  */
 function mixColor(c1, c2, rate) {
 
@@ -39,7 +47,14 @@ function mixColor(c1, c2, rate) {
     return (r3 << 16) | (g3 << 8) | b3;
 }
 
-// Load an .obj file with a texture in image format.
+/**
+ * .obj파일을 이미지 형식의 텍스쳐와 함께 불러온다.
+ * 
+ * @param {String} objectPath .obj 파일의 상대 혹은 절대경로
+ * @param {String} texturePath 텍스쳐 파일의 상대 혹은 절대경로
+ * @param {Function} onLoad .obj 파일을 읽은 후 - function (object)
+ * @param {Function} onError 파일 읽기에 실패한 후 - function (error)
+ */
 function loadObject(objectPath, texturePath, onLoad, onError) {
 
     var loader = new THREE.OBJLoader();
@@ -68,8 +83,14 @@ function loadObject(objectPath, texturePath, onLoad, onError) {
     }, undefined, onError);
 }
 
-// Load an .glb file and execute onLoad(gltf), onError(error)
-// gltf.scene -> model, gltf.animations -> animations
+
+/**
+ * .glb 파일을 불러온다.
+ *
+ * @param {String} glbPath .glb 파일의 상대 혹은 절대경로
+ * @param {Function} onLoad .glb 파일을 읽은 후 - function (object)
+ * @param {Function} onError 파일 읽기에 실패한 후 - function (error)
+ */
 function loadGLB(glbPath, onLoad, onError) {
 
     const loader = new THREE.GLTFLoader();

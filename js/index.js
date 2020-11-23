@@ -56,8 +56,8 @@ var jumpDuration = 500; // 점프 지속 시간 (밀리초)
 // #region 유틸리티 함수
  /**
   * 애니메이션을 자연스럽게 전환한다.
-  * @param {*} i 다음에 실행할 애니메이션의 인덱스
-  * @param {*} duration 애니메이션 fading 시간
+  * @param {number} i 다음에 실행할 애니메이션의 인덱스
+  * @param {number} duration 애니메이션 fading 시간
   */
 function fadeToAction(i, duration) {
 
@@ -85,7 +85,7 @@ function fadeToAction(i, duration) {
 /**
  * 그림자가 생성되는 범위를 벗어나지 않도록 좌표를 조정한다.
  * 
- * @param {*} pos 조정 이전의 좌표 값
+ * @param {number} pos 조정 이전의 좌표 값
  */
 function loopPosition(pos) {
 
@@ -101,7 +101,7 @@ function loopPosition(pos) {
 /**
  * 점프할 때 시간에 따른 높이 값을 계산한다.
  * 
- * @param {*} time 점프 이벤트 이후 시간
+ * @param {number} time 점프 이벤트 이후 시간
  */
 function getJumpHeight() {
 
@@ -253,7 +253,7 @@ onInit = function() {
 /**
  * 프레임마다 오브젝트를 업데이트한다.
  * 
- * @param {*} deltaTime 이전 프레임 이후 지난 시간 (초)
+ * @param {number} deltaTime 이전 프레임 이후 지난 시간 (초)
  */
 onUpdate = function(deltaTime) {
 
