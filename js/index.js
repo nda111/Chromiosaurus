@@ -186,10 +186,11 @@ onkeydown = function(e) {
  */
 onInit = function(done) {
 
-    /// 리소스 모델을 불러온다.
     const errorHandler = function (error) { console.error(error); };
-    // Robot
+    
+    /// 리소스 모델을 불러오는 작업 리스트
     const proms = [
+        // Robot
         loadGLB(
             "../obj/robot.glb",
             function (gltf) {
@@ -249,6 +250,7 @@ onInit = function(done) {
             }, errorHandler)
     ];
     
+    // 로딩이 완료된 후 실행할 초기화 작업 콜백
     Promise.all(proms).then(_ => {
 
         // Scene
