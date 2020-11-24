@@ -501,8 +501,6 @@ onUpdate = function(deltaTime) {
         rate
     ));
 
-    // TODO: Merge obstacles into a group.
-
     // TODO: Hit test with obstacle here.
 
     /// Test perspective
