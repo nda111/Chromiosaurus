@@ -409,9 +409,6 @@ onUpdate = function(deltaTime) {
 
         if (obstacle.position.z < disposeZ) {
 
-            obstacle.geometry.dispose();
-            obstacle.material.dispose();
-
             numDelete++;
         } else {
 
@@ -424,9 +421,6 @@ onUpdate = function(deltaTime) {
     for (let deco of decorations.children) {
 
         if (deco.position.z < disposeZ) {
-            
-            deco.geometry.dispose();
-            deco.material.dispose();
 
             numDelete++;
         } else {
