@@ -57,30 +57,30 @@ function mixColor(c1, c2, rate) {
  */
 function loadObject(objectPath, texturePath, onLoad, onError) {
 
-    var loader = new THREE.OBJLoader();
-    const texture = new THREE.TextureLoader();
-    texture.load(texturePath, 
-        function (texture) { // On texture successfully loaded.
+    return new Promise(resolve => {
+        new THREE.TextureLoader().load(texturePath,
+            function (texture) { 
 
-        // In this example we create the material when the texture is loaded
-        const yokoMaterial = new THREE.MeshPhongMaterial({
-            map: texture
-        });
-        loader.load(objectPath, 
-            function (objects) { // On model successfully loaded.
+                const material = new THREE.MeshPhongMaterial({
+                    map: texture
+                });
+                new THREE.OBJLoader().load(objectPath,
+                    function (objects) { 
 
-            objects.traverse(function (child) {
+                        objects.traverse(function (child) {
 
-                // This allow us to check if the children is an instance of the Mesh constructor
-                if (child instanceof THREE.Mesh) {
+                            // This allow us to check if the children is an instance of the Mesh constructor
+                            if (child instanceof THREE.Mesh) {
 
-                    child.material = yokoMaterial;
-                }
-            });
-            
-            onLoad(objects);
-        }, undefined, onError);
-    }, undefined, onError);
+                                child.material = material;
+                            }
+                        });
+
+                        onLoad(objects);
+                        resolve();
+                    }, undefined, onError);
+            }, undefined, onError);
+    });
 }
 
 
@@ -93,6 +93,12 @@ function loadObject(objectPath, texturePath, onLoad, onError) {
  */
 function loadGLB(glbPath, onLoad, onError) {
 
-    const loader = new THREE.GLTFLoader();
-    loader.load(glbPath, onLoad, undefined, onError);
+    return new Promise(resolve => {
+
+        new THREE.GLTFLoader().load(glbPath, function (obj) {
+
+            onLoad(obj);
+            resolve();
+        }, undefined, onError);
+    });
 }
