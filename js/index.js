@@ -6,8 +6,8 @@ const ObstacleRenderDistance = 100; // 장애물 생성 거리
 const ObstacleGenDelay = 2.0;   // 장애물 생성 시간 간격 (초)
 const DecorationGenDelay = 0.5; // 장식물 생성 시간 간격 (초)
 
-const DecorationHorizontalRegion = [-50.0, 100.0] // 장식물이 생성되는 범위
-const DecorationVerticalBias = 3.0;
+const DecorationHorizontalRegion = [-50.0, 100.0] // 장식물이 생성되는 가로 범위
+const DecorationVerticalBias = 3.0; // 장식물이 세로로 편향되는 최대 값
 const MinDecorationsPerRow = 1; // 한 번에 생성되는 최소 장식물 수
 const MaxDecorationsPerRow = 5; // 한 번에 생성되는 최대 장식물 수
 
