@@ -39,6 +39,8 @@ const FlashLightSetup = { // 밤에 보이는 플래시라이트 좌표 설정
     TargetOffset: [0.0, -1.0, 1.0], // 플래시라이트에 상대적인 타겟 상대좌표
 };
 
+const GameOverThreshold = 6; // 플레이어, 장애물의 바운딩박스가 GameOverThreshold 프레임 동안 겹쳐지면 게임오버 발생
+
 var RunningDuration = -1; // 달리기 애니메이션 주기
 
 // #endregion
@@ -73,6 +75,9 @@ var obstacleTimer = 0;
 var decoTimer = 0;
 var obstacles = new THREE.Group();
 var decorations = new THREE.Group();
+
+// 게임오버 관리
+var gameOverCount = 0;
 
 // #endregion
 
@@ -224,7 +229,7 @@ onInit = function(done) {
             "../obj/rock2/GreyRockTexture.png",
             function (object) {
 
-                const s = 3.5;
+                const s = 3.0;
                 for (let i = 0; i < object.children.length; i++) {
 
                     let rock = object.children[i];
@@ -501,12 +506,26 @@ onUpdate = function(deltaTime) {
         rate
     ));
 
-    // TODO: Hit test with obstacle here.
+    // 충돌 검사를 통해 게임 오버를 감지한다
+    if (robot.model && obstacles.children.length) { // 게임이 준비되면 검사한다
 
-    /// Test perspective
-    // camera.position.set(0, 30, zPos);
-    // camera.lookAt(0, 0, zPos);
-    // camera.rotateZ(radian(180));
+        const playerBox = new THREE.Box3().setFromObject(robot.model);
+        const obstacleBox = new THREE.Box3().setFromObject(obstacles.children[0]);
+        const hit = playerBox.intersectsBox(obstacleBox);
+
+        if (hit) { // 충돌이 있다면
+ 
+            if (++gameOverCount > GameOverThreshold) { // 횟수를 증가시키고 역치 이상이면
+
+                // TODO: 게임오버 이벤트를 발생시킨다.
+                console.warn("Game over not implemented.");
+                console.log('-');
+            }
+        } else { // 충돌이 없다면
+
+            gameOverCount = 0; // 횟수를 리셋한다.
+        }
+    }
 };
 
 // #endregion
