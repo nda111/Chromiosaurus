@@ -36,17 +36,20 @@ function startScene(width, height, fps = 60) {
     renderer.setSize(width, height); // 뷰포트 크기 설정
     document.body.appendChild(renderer.domElement); // html 문서에 캔버스 추가
 
-    if (onInit != undefined) {
+    new Promise(resolve => {
+        if (onInit != undefined) {
 
-        // 객체 초기화
-        onInit();
-    }
+            // 객체 초기화
+            onInit(resolve);
+        }
+    }).then(_ => {
 
-    // 게임 시작 시간 등록
-    prevTime = Date.now();
-
-    // frame rate 적용, 타이머 시작
-    setFrameRate(fps);
+        // 게임 시작 시간 등록
+        prevTime = Date.now() / 1000.0;
+    
+        // frame rate 적용, 타이머 시작
+        setFrameRate(fps);
+    });
 }
 
 /**
@@ -54,8 +57,8 @@ function startScene(width, height, fps = 60) {
  */
 function onFrame() {
 
-    const now = Date.now();
-    const elapsed = now - prevTime;
+    const now = Date.now() / 1000.0;
+    const elapsed = (now - prevTime);
     prevTime = now;
 
     playTime += elapsed;
@@ -64,7 +67,7 @@ function onFrame() {
     
         // 초 단위 지난 시간을 파라미터로 패스하고
         // 프레임 업데이트를 수행한다.
-        onUpdate(elapsed / 1000.0);
+        onUpdate(elapsed);
     }
 
     // 렌더링 camera를 가지고 현재 scene을 렌더링한다.

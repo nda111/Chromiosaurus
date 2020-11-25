@@ -1,7 +1,19 @@
 
 // #region 게임 설정값
 const MaxCoordZ = 100; // 그림자가 정상적으로 발생하는 범위. if (coord >= MaxCoord) coord -= MaxCoord;
+const ObstacleRenderDistance = 100; // 장애물 생성 거리
 
+const ObstacleGenDelay = 2.0;   // 장애물 생성 시간 간격 (초)
+const DecorationGenDelay = 0.5; // 장식물 생성 시간 간격 (초)
+
+const DecorationHorizontalRegion = [-50.0, 100.0] // 장식물이 생성되는 가로 범위
+const DecorationVerticalBias = 3.0; // 장식물이 세로로 편향되는 최대 값
+const MinDecorationsPerRow = 1; // 한 번에 생성되는 최소 장식물 수
+const MaxDecorationsPerRow = 5; // 한 번에 생성되는 최대 장식물 수
+
+const ObjectDisposeThreshold = -10.0; // 장애물, 데코를 폐기하는 좌표
+
+const RoadWidth = 10.0; // 길 너비
 const CanvasSizeRate = 0.6; // 캔버스의 세로/가로 비율
 const Pallete = { // 게임에 사용되는 색상 리스트
     Sky: { // 하늘 색
@@ -27,6 +39,8 @@ const FlashLightSetup = { // 밤에 보이는 플래시라이트 좌표 설정
     TargetOffset: [0.0, -1.0, 1.0], // 플래시라이트에 상대적인 타겟 상대좌표
 };
 
+const GameOverThreshold = 6; // 플레이어, 장애물의 바운딩박스가 GameOverThreshold 프레임 동안 겹쳐지면 게임오버 발생
+
 var RunningDuration = -1; // 달리기 애니메이션 주기
 
 // #endregion
@@ -46,10 +60,24 @@ var animationMixer = undefined; // 애니메이션 믹서
 var currentAction = undefined;  // 현재 실행 중인 애니메이션
 
 // 게임 플레이 관련
-var speed = 7; // 플레이어 달리기 속도 (1.0/초)
+var speed = 15; // 플레이어 달리기 속도 (1.0/초)
 var jumpTime = -Infinity; // 점프 시작 시간
 var jumpFlag = false; // true라면 점프 중, 아니라면 false
-var jumpDuration = 500; // 점프 지속 시간 (밀리초)
+var jumpDuration = 0.5; // 점프 지속 시간 (밀리초)
+
+// 장애물, 데코 등 모델
+var cactus = undefined;
+var rocks = [];
+var decoRocks = [];
+
+// 장애물, 데코레이션 큐
+var obstacleTimer = 0;
+var decoTimer = 0;
+var obstacles = new THREE.Group();
+var decorations = new THREE.Group();
+
+// 게임오버 관리
+var gameOverCount = 0;
 
 // #endregion
 
@@ -156,98 +184,164 @@ onkeydown = function(e) {
 /**
  * 게임이 시작될 때 오브젝트를 초기화한다.
  */
-onInit = function() {
+onInit = function(done) {
 
-    // Scene
-    scene.background = new THREE.Color(Pallete.Sky.Night);
-
-    // Camera
-    const cosTheta = Math.cos(CameraPosition.Theta);
-    const sinTheta = Math.sin(CameraPosition.Theta);
-    const cosPhi = Math.cos(CameraPosition.Phi);
-    const sinPhi = Math.sin(CameraPosition.Phi);
-    camera.position.set(
-        CameraPosition.Distance * sinTheta * cosPhi,
-        CameraPosition.Distance * sinPhi, 
-        CameraPosition.Distance * cosTheta * cosPhi);
-    CameraPosition.z = camera.position.z;
-    camera.lookAt(0, 0, CameraPosition.FocusDistance);
-
-    // Point light: Sun
-    sunLight = new THREE.PointLight(Pallete.Light.Sun, 1.2);
-    sunLight.castShadow = true; 
-    sunLight.position.set(-10, 12, 0);
-    sunLight.shadow.camera.left = 0;
-    sunLight.shadow.camera.right = MaxCoordZ;
-    sunLight.shadow.camera.top = 10;
-    sunLight.shadow.camera.bottom = -10;
-    sunLight.shadow.mapSize.width = 2048;
-    scene.add(sunLight);
-
-    // Directional Light: Moon
-    moonLight = new THREE.DirectionalLight(Pallete.Light.Moon, 0.3);
-    moonLight.castShadow = true;
-    scene.add(moonLight);
-
-    // Spot Light: Flash
-    const lightPos = new THREE.Vector3(FlashLightSetup.Offset[0], FlashLightSetup.Offset[1], FlashLightSetup.Offset[2]);
-    const targetPos = new THREE.Vector3(lightPos.x, lightPos.y - 1.0, lightPos.z + 1.0);
-    flashLight = new THREE.SpotLight(Pallete.Light.Flash, 1.0);
-    flashLight.castShadow = true;
-    flashLight.position.set(lightPos.x, lightPos.y, lightPos.z);
-    flashLight.target.position.set(targetPos.x, targetPos.y, targetPos.z);
-    flashLight.angle = radian(55);
-    flashLight.distance = 60.0;
-    scene.add(flashLight);
-    scene.add(flashLight.target);
-     
-    // Ground
-    var groundGeometry = new THREE.PlaneBufferGeometry(10000, 10000, 8, 8);
-    var groundMaterial = new THREE.MeshPhongMaterial({ color: Pallete.Ground });
-    ground = new THREE.Mesh(groundGeometry, groundMaterial);
-    ground.rotateX(Math.PI / -2.0);
-    ground.castShadow = true; //default is false
-    ground.receiveShadow = true; //default
-    scene.add(ground);
+    const errorHandler = function (error) { console.error(error); };
     
-    // Road
-    var roadGeometry = new THREE.BoxGeometry(10, 10000, 0.2);
-    var roadMaterial = new THREE.MeshPhongMaterial({ color: Pallete.Road });
-    road = new THREE.Mesh(roadGeometry, roadMaterial);
-    road.castShadow = true; //default is false
-    road.receiveShadow = true; //default     
-    road.rotation.set(Math.PI / -2.0, 0, 0);
-    scene.add(road);
+    /// 리소스 모델을 불러오는 작업 리스트
+    const proms = [
+        // Robot
+        loadGLB(
+            "../obj/robot.glb",
+            function (gltf) {
 
-    // Robot
-    loadGLB("../obj/robot.glb", 
-        function (gltf) {
+                robot.model = gltf.scene;
+                robot.animations = gltf.animations;
 
-            robot.model = gltf.scene;
-            robot.animations = gltf.animations;
+                robot.model.traverse(function (child) {
 
-            robot.model.traverse(function (child) {
+                    if (child instanceof THREE.Mesh) {
 
-                if (child instanceof THREE.Mesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+            }, errorHandler),
 
-                    child.castShadow = true;
-                    child.receiveShadow = true;
+        // Cactus
+        loadObject(
+            "../obj/cactus/model.obj",
+            "../obj/cactus/textures/SmallCactus4_default_albedo.jpeg",
+            function (object) {
+
+                const scale = 3.5;
+
+                cactus = object.children[2];
+                cactus.scale.set(scale, scale, scale);
+                cactus.position.set(-1.5, 0, 0);
+
+                cactus.castShadow = true;
+                cactus.receiveShadow = true;
+            }, errorHandler),
+
+        // Rocks
+        loadObject(
+            "../obj/rock2/RockPackByPava.obj",
+            "../obj/rock2/GreyRockTexture.png",
+            function (object) {
+
+                const s = 3.0;
+                for (let i = 0; i < object.children.length; i++) {
+
+                    let rock = object.children[i];
+
+                    if (rock instanceof THREE.Mesh) {
+
+                        rock.castShadow = true;
+                        rock.receiveShadow = true;
+
+                        decoRocks.push(rock.clone());
+                        
+                        rock.scale.set(s * (Math.random() + 1), s, s);
+                        rock.position.set(0, 1, 0);
+                        rocks.push(rock);
+                    }
                 }
-            });
-            
-            const clip = robot.animations[6]; // 달리기 애니메이션
-            RunningDuration = clip.duration;
-            animationMixer = new THREE.AnimationMixer(robot.model);
-            currentAction = animationMixer.clipAction(clip);
-            currentAction.clampWhenFinished = true;
-            currentAction.play();
+            }, errorHandler)
+    ];
+    
+    // 로딩이 완료된 후 실행할 초기화 작업 콜백
+    Promise.all(proms).then(_ => {
 
-            scene.add(robot.model);
-        }, function (error) {
+        // Scene
+        scene.background = new THREE.Color(Pallete.Sky.Night);
 
-            console.log(error);
+        // Camera
+        const cosTheta = Math.cos(CameraPosition.Theta);
+        const sinTheta = Math.sin(CameraPosition.Theta);
+        const cosPhi = Math.cos(CameraPosition.Phi);
+        const sinPhi = Math.sin(CameraPosition.Phi);
+        camera.position.set(
+            CameraPosition.Distance * sinTheta * cosPhi,
+            CameraPosition.Distance * sinPhi,
+            CameraPosition.Distance * cosTheta * cosPhi);
+        CameraPosition.z = camera.position.z;
+        camera.lookAt(0, 0, CameraPosition.FocusDistance);
+
+        // Point light: Sun
+        sunLight = new THREE.PointLight(Pallete.Light.Sun, 1.2);
+        sunLight.castShadow = true;
+        sunLight.position.set(-10, 12, 0);
+        sunLight.shadow.camera.left = 0;
+        sunLight.shadow.camera.right = MaxCoordZ / 2.0 + ObstacleRenderDistance;
+        sunLight.shadow.camera.top = 1000;
+        sunLight.shadow.camera.bottom = -1000;
+        sunLight.shadow.mapSize.width = 2048;
+        scene.add(sunLight);
+
+        // Directional Light: Moon
+        moonLight = new THREE.DirectionalLight(Pallete.Light.Moon, 0.3);
+        moonLight.castShadow = true;
+        moonLight.shadow.camera.left = MaxCoordZ / 2.0;
+        moonLight.shadow.camera.right = MaxCoordZ + ObstacleRenderDistance;
+        moonLight.shadow.camera.top = 1000;
+        moonLight.shadow.camera.bottom = -1000;
+        scene.add(moonLight);
+
+        // Spot Light: Flash
+        const lightPos = new THREE.Vector3(FlashLightSetup.Offset[0], FlashLightSetup.Offset[1], FlashLightSetup.Offset[2]);
+        const targetPos = new THREE.Vector3(lightPos.x, lightPos.y - 1.0, lightPos.z + 1.0);
+        flashLight = new THREE.SpotLight(Pallete.Light.Flash, 1.0);
+        flashLight.castShadow = true;
+        flashLight.position.set(lightPos.x, lightPos.y, lightPos.z);
+        flashLight.target.position.set(targetPos.x, targetPos.y, targetPos.z);
+        flashLight.angle = radian(55);
+        flashLight.distance = 60.0;
+        flashLight.shadow.camera.left = MaxCoordZ / 2.0;
+        flashLight.shadow.camera.right = MaxCoordZ + ObstacleRenderDistance;
+        flashLight.shadow.camera.top = 1000;
+        flashLight.shadow.camera.bottom = -1000;
+        scene.add(flashLight);
+        scene.add(flashLight.target);
+
+        // Ground
+        var groundGeometry = new THREE.PlaneBufferGeometry(10000, 10000, 8, 8);
+        var groundMaterial = new THREE.MeshPhongMaterial({
+            color: Pallete.Ground
         });
-}
+        ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotateX(Math.PI / -2.0);
+        ground.castShadow = true; //default is false
+        ground.receiveShadow = true; //default
+        scene.add(ground);
+
+        // Road
+        var roadGeometry = new THREE.BoxGeometry(RoadWidth, 10000, 0.2);
+        var roadMaterial = new THREE.MeshPhongMaterial({
+            color: Pallete.Road
+        });
+        road = new THREE.Mesh(roadGeometry, roadMaterial);
+        road.castShadow = true; //default is false
+        road.receiveShadow = true; //default     
+        road.rotation.set(Math.PI / -2.0, 0, 0);
+        scene.add(road);
+
+        // Robot
+        const clip = robot.animations[6]; // 달리기 애니메이션
+        RunningDuration = clip.duration;
+        animationMixer = new THREE.AnimationMixer(robot.model);
+        currentAction = animationMixer.clipAction(clip);
+        currentAction.clampWhenFinished = true;
+        currentAction.play();
+        scene.add(robot.model);
+
+        // Obstacles, Decorations
+        scene.add(obstacles);
+        scene.add(decorations);
+
+        done();
+    });
+};
 
 /**
  * 프레임마다 오브젝트를 업데이트한다.
@@ -256,15 +350,117 @@ onInit = function() {
  */
 onUpdate = function(deltaTime) {
 
-    if (animationMixer) {
+    // 애니메이션 업데이트
+    animationMixer.update(deltaTime);
 
-        // 애니메이션이 있다면 업데이트
-        animationMixer.update(deltaTime);
+    // 플레이어 위치 계산
+    const yPos = getJumpHeight();
+    var zPos = speed * deltaTime + robot.model.position.z;
+
+    // 장애물, 데코 추가
+    const newObjectCoordZ = zPos + ObstacleRenderDistance;
+    obstacleTimer += deltaTime;
+    decoTimer += deltaTime;
+    if (obstacleTimer > ObstacleGenDelay) { // 타이머가 종료되면
+
+        // 타이머를 초기화하고
+        obstacleTimer -= ObstacleGenDelay;
+
+        let obj;
+        let bCactus = Math.random() >= 0.7;
+        if (bCactus) { // 50% 확률로 선인장
+
+            obj = cactus;
+        } else { // 50% 확률로 돌을
+
+            let idx = Math.round(Math.random() * (rocks.length - 1)); // 균일한 확률로 돌들 중 한 개를
+            obj = rocks[idx];
+        }
+        let newObstacle = obj.clone(); // 복제하고
+        newObstacle.position.z = newObjectCoordZ; // 위치를 설정해
+
+        // 장애물 목록과 scene 오브젝트에 추가한다.
+        obstacles.add(newObstacle);
+    }
+    if (decoTimer > DecorationGenDelay) {
+
+        decoTimer -= DecorationGenDelay;
+
+        const RoadWidthHalf = RoadWidth / 2.0;
+        const numDeco = Math.round(Math.random() * (MaxDecorationsPerRow - MinDecorationsPerRow) + MinDecorationsPerRow);
+        for (let i = 0; i < numDeco; i++) {
+
+            const xPos = Math.random() * (DecorationHorizontalRegion[1] - DecorationHorizontalRegion[0]) + DecorationHorizontalRegion[0];
+            if (-RoadWidthHalf <= xPos && xPos <= RoadWidthHalf) {
+
+                continue;
+            }
+
+            const zBias = Math.random() * DecorationVerticalBias;
+
+            const idx = Math.round(Math.random() * (decoRocks.length - 1));
+            let newDeco = decoRocks[idx].clone();
+
+            newDeco.position.x = xPos;
+            newDeco.position.z = newObjectCoordZ + zBias;
+
+            decorations.add(newDeco);
+        }
     }
 
-    // 플레이어의 위치
-    const yPos = getJumpHeight();
-    const zPos = loopPosition(speed * deltaTime + robot.model.position.z);
+    // 사용되지 않는 장애물, 장식물을 폐기한다.
+    const disposeZ = zPos + ObjectDisposeThreshold; // 폐기 역치 z좌표
+    // 장애물 폐기
+    var numDelete = 0;
+    for (let obstacle of obstacles.children) {
+
+        if (obstacle.position.z < disposeZ) {
+
+            numDelete++;
+        } else {
+
+            break;
+        }
+    }
+    obstacles.children.splice(0, numDelete);
+    // 장식물 폐기
+    numDelete = 0;
+    for (let deco of decorations.children) {
+
+        if (deco.position.z < disposeZ) {
+
+            numDelete++;
+        } else {
+
+            break;
+        }
+    }
+    decorations.children.splice(0, numDelete);
+
+    // 블레이어 위치 업데이트
+    if (zPos > MaxCoordZ) {
+
+        zPos -= MaxCoordZ;
+
+        const thres = MaxCoordZ + ObjectDisposeThreshold;
+        for (let obstacle of obstacles.children) {
+
+            if (obstacle.position.z > thres) {
+
+                obstacle.position.z -= MaxCoordZ;
+            } else {
+
+                break;
+            }
+        }
+        for (let deco of decorations.children) {
+
+            if (deco.position.z > thres) {
+
+                deco.position.z -= MaxCoordZ;
+            }
+        }
+    }
 
     // 플레이어의 yz좌표 업데이트
     robot.model.position.z = zPos;
@@ -311,9 +507,30 @@ onUpdate = function(deltaTime) {
         Pallete.Sky.Night,
         rate
     ));
+
+    // 충돌 검사를 통해 게임 오버를 감지한다
+    if (robot.model && obstacles.children.length) { // 게임이 준비되면 검사한다
+
+        const playerBox = new THREE.Box3().setFromObject(robot.model);
+        const obstacleBox = new THREE.Box3().setFromObject(obstacles.children[0]);
+        const hit = playerBox.intersectsBox(obstacleBox);
+
+        if (hit) { // 충돌이 있다면
+ 
+            if (++gameOverCount > GameOverThreshold) { // 횟수를 증가시키고 역치 이상이면
+
+                // TODO: 게임오버 이벤트를 발생시킨다.
+                console.warn("Game over not implemented.");
+                console.log('-');
+            }
+        } else { // 충돌이 없다면
+
+            gameOverCount = 0; // 횟수를 리셋한다.
+        }
+    }
 };
 
 // #endregion
 
 // 캔버스에 그리기 작업을 시작한다.
-startScene(window.innerWidth, window.innerWidth * CanvasSizeRate);
+startScene(window.innerWidth, window.innerWidth * CanvasSizeRate, 60);
