@@ -198,7 +198,7 @@ onkeydown = function (e) {
             default:
                 break;
         }
-    } else {
+    } else { // 게임 시작
 
         fadeToAction(RobotAnimations.Running, 0.5);
         playTime = 0;
@@ -385,7 +385,6 @@ onInit = function (done) {
         textContext.fillStyle = "#970"; 
         textContext.fillText('Press any key to start', 0, 60);
 
-        // canvas contents will be used for a texture
         var textTexture = new THREE.Texture(textCanvas)
         textTexture.needsUpdate = true;
         textTexture.minFilter = THREE.LinearFilter;
@@ -502,15 +501,16 @@ onUpdate = function (deltaTime) {
         }
         decorations.children.splice(0, numDelete);
 
-        // 플레이어 위치 업데이트
+        // 플레이어 위치 계산
         if (zPos > MaxCoordZ) {
 
             zPos -= MaxCoordZ;
 
-            const thres = MaxCoordZ + ObjectDisposeThreshold;
+            // 필요없어진 오브젝트 제거
+            const disposeThreshold = MaxCoordZ + ObjectDisposeThreshold;
             for (let obstacle of obstacles.children) {
 
-                if (obstacle.position.z > thres) {
+                if (obstacle.position.z > disposeThreshold) {
 
                     obstacle.position.z -= MaxCoordZ;
                 } else {
@@ -520,7 +520,7 @@ onUpdate = function (deltaTime) {
             }
             for (let deco of decorations.children) {
 
-                if (deco.position.z > thres) {
+                if (deco.position.z > disposeThreshold) {
 
                     deco.position.z -= MaxCoordZ;
                 }
@@ -535,7 +535,9 @@ onUpdate = function (deltaTime) {
         const CamPositioningDuration = 3.0;
         if (playTime <= CamPositioningDuration) {
 
-            const progress = playTime / CamPositioningDuration;
+            // 카메라 위치 설정 진행도
+            // const progress = playTime / CamPositioningDuration; // Linear
+            const progress = (1 - Math.cos(playTime / CamPositioningDuration * Math.PI)) / 2; // Ease with cosine
             const _progress = 1 - progress;
 
             const x = CameraPosition.InitialPosition[0] * _progress + CameraPosition.x * progress;
