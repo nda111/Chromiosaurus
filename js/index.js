@@ -56,7 +56,7 @@ const RobotAnimations = { // 로봇 애니메이션 인덱스
     Yes: 13,
 };
 
-const GameOverThreshold = 6; // 플레이어, 장애물의 바운딩박스가 GameOverThreshold 프레임 동안 겹쳐지면 게임오버 발생
+const GameOverThreshold = 8; // 플레이어, 장애물의 바운딩박스가 GameOverThreshold 프레임 동안 겹쳐지면 게임오버 발생
 
 var RunningDuration = -1; // 달리기 애니메이션 주기
 
