@@ -78,6 +78,8 @@ var currentAction = undefined; // 현재 실행 중인 애니메이션
 
 // HTML GUI 요소
 var scoreText = undefined;
+var gameoverText = undefined;
+var retryButton = undefined;
 
 // 게임 플레이 관련
 var bPlaying = false; // 게임이 플레이 중인지 저장
@@ -86,7 +88,7 @@ var fixCameraFlag = false; // 게임 시작 후 시점이 변한 후 고정할�
 var speed = 15; // 플레이어 달리기 속도 (1.0/초)
 var jumpTime = -Infinity; // 점프 시작 시간
 var jumpFlag = false; // true라면 점프 중, 아니라면 false
-var jumpDuration = 0.5; // 점프 지속 시간 (밀리초)
+const jumpDuration = 0.5; // 점프 지속 시간 (밀리초)
 
 // 점수 책정
 var passedCactusCount = 0;  // 뛰어넘은 선인장 개수
@@ -106,6 +108,7 @@ var decorations = new THREE.Group();
 
 // 게임오버 관리
 var gameOverCount = 0;
+var bDead = false;
 
 // #endregion
 
@@ -199,7 +202,11 @@ onresize = function () {
  */
 onkeydown = function (e) {
 
-    if (bPlaying) {
+    if (bDead) {
+
+        onRetry();
+
+    } else if (bPlaying) {
 
         switch (e.code) {
     
@@ -216,13 +223,46 @@ onkeydown = function (e) {
         }
     } else { // 게임 시작
 
-        fadeToAction(RobotAnimations.Running, 0.5);
-        scoreText.style.visibility = "visible";
-        passedCactusCount = 0;
-        playTime = 0;
-        bPlaying = true;
-        fixCameraFlag = true;
+        startGame();
     }
+}
+
+function startGame() {
+
+    fadeToAction(RobotAnimations.Running, 0.5);
+    scoreText.style.visibility = "visible";
+    gameOverCount = 0;
+    passedCactusCount = 0;
+    playTime = 0;
+    bDead = false;
+    bPlaying = true;
+    fixCameraFlag = true;
+}
+
+function onGameOver() {
+
+    bPlaying = false;
+    bDead = true;
+
+    gameoverText.style.visibility = "visible"; 
+}
+
+function onRetry() {
+
+    gameoverText.style.visibility = "hidden";
+
+    robot.model.position.set(0, 0, 0);
+
+    obstacles.children = [];
+    decorations.children = [];
+
+    jumpTime = -Infinity;
+    jumpFlag = false;
+    gameOverCount = 0;
+    passedCactusCount = 0;
+    playTime = 0;
+    bDead = false;
+    bPlaying = true;
 }
 
 //#endregion
@@ -420,6 +460,14 @@ onInit = function (done) {
 
         // scoreText
         scoreText = document.getElementById("score-text");
+
+        // gameoverText
+        gameoverText = document.getElementById("gameover-text");
+        gameoverText.style.top = (renderer.domElement.clientHeight - gameoverText.clientHeight) / 2 + "px";
+
+        // retryButton
+        retryButton = document.getElementById("retry-button");
+        retryButton.onclick = onRetry;
         
         // Finalize the promise
         done();
@@ -433,8 +481,11 @@ onInit = function (done) {
  */
 onUpdate = function (deltaTime) {
 
-    // 애니메이션 업데이트
-    animationMixer.update(deltaTime);
+    if (!bDead) {
+        
+        // 애니메이션 업데이트
+        animationMixer.update(deltaTime);
+    }
 
     if (bPlaying) { // 게임이 플레이 중이라면
 
@@ -645,9 +696,7 @@ onUpdate = function (deltaTime) {
 
                 if (++gameOverCount > GameOverThreshold) { // 횟수를 증가시키고 역치 이상이면
 
-                    // TODO: 게임오버 이벤트를 발생시킨다.
-                    console.warn("Game over not implemented.");
-                    console.log('-');
+                    onGameOver();
                 }
             } else { // 충돌이 없다면
 
