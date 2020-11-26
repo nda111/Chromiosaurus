@@ -10,7 +10,7 @@ const DecorationVerticalBias = 3.0; // 장식물이 세로로 편향되는 최�
 const MinDecorationsPerRow = 1; // 한 번에 생성되는 최소 장식물 수
 const MaxDecorationsPerRow = 5; // 한 번에 생성되는 최대 장식물 수
 
-const ObjectDisposeThreshold = -10.0; // 장애물, 데코를 폐기하는 좌표
+const ObjectDisposeThreshold = -7.0; // 장애물, 데코를 폐기하는 좌표
 
 const RoadWidth = 10.0; // 길 너비
 const CanvasSizeRate = 0.6; // 캔버스의 세로/가로 비율
