@@ -48,6 +48,32 @@ function mixColor(c1, c2, rate) {
 }
 
 /**
+ * 약간 투명해진 색상 코드를 "#AARRGGBB" 형식의 문자열로 변환한다.
+ * 
+ * @param {number} color 
+ */
+function getTransparentColorString(color) {
+
+    const HexChars = "0123456789ABCDEF";
+
+    const values = [
+        (color >> 24) & 0xFF,
+        (color >> 16) & 0xFF,
+        (color >> 8) & 0xFF,
+        (color >> 0) & 0xFF,
+    ];
+
+    var result = "#";
+    for (let value of values) {
+
+        result += HexChars[value >> 4];
+        result += HexChars[value & 0xF];
+    }
+
+    return result;
+}
+
+/**
  * .obj파일을 이미지 형식의 텍스쳐와 함께 불러온다.
  * 
  * @param {String} objectPath .obj 파일의 상대 혹은 절대경로

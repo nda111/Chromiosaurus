@@ -76,6 +76,9 @@ var robot = { // 로봇 객체의 데이터 집합
 var animationMixer = undefined; // 애니메이션 믹서
 var currentAction = undefined; // 현재 실행 중인 애니메이션
 
+// HTML GUI 요소
+var scoreText = undefined;
+
 // 게임 플레이 관련
 var bPlaying = false; // 게임이 플레이 중인지 저장
 var fixCameraFlag = false; // 게임 시작 후 시점이 변한 후 고정할지 여부
@@ -84,6 +87,11 @@ var speed = 15; // 플레이어 달리기 속도 (1.0/초)
 var jumpTime = -Infinity; // 점프 시작 시간
 var jumpFlag = false; // true라면 점프 중, 아니라면 false
 var jumpDuration = 0.5; // 점프 지속 시간 (밀리초)
+
+// 점수 책정
+var passedCactusCount = 0;  // 뛰어넘은 선인장 개수
+var scorePerCactus = 100;   // 선인장 한 개당 점수
+var scorePerSecond = 10;    // 플레이 시간 1초 점수
 
 // 장애물, 데코 등 모델
 var cactus = undefined;
@@ -102,6 +110,14 @@ var gameOverCount = 0;
 // #endregion
 
 // #region 유틸리티 함수
+/**
+ * 현재 점수를 계산한다.
+ */
+function calculateScore() {
+
+    return Math.round(playTime * scorePerSecond + passedCactusCount * scorePerCactus);
+}
+
 /**
  * 애니메이션을 자연스럽게 전환한다.
  * @param {number} i 다음에 실행할 애니메이션의 인덱스
@@ -201,6 +217,8 @@ onkeydown = function (e) {
     } else { // 게임 시작
 
         fadeToAction(RobotAnimations.Running, 0.5);
+        scoreText.style.visibility = "visible";
+        passedCactusCount = 0;
         playTime = 0;
         bPlaying = true;
         fixCameraFlag = true;
@@ -398,8 +416,11 @@ onInit = function (done) {
             textMaterial
         );
         textMesh.position.set(0, 50, -200);
-        scene.add(textMesh)
+        scene.add(textMesh);
 
+        // scoreText
+        scoreText = document.getElementById("score-text");
+        
         // Finalize the promise
         done();
     });
@@ -481,6 +502,11 @@ onUpdate = function (deltaTime) {
             if (obstacle.position.z < disposeZ) {
 
                 numDelete++;
+
+                if (obstacle.name == cactus.name) { // 뛰어넘은 장애물이 선인장이라면
+                    
+                    passedCactusCount++; // 개수 추가
+                }
             } else {
 
                 break;
@@ -588,17 +614,24 @@ onUpdate = function (deltaTime) {
             flashLight.position.set(0, -1, 0);
         }
 
-        // 배경 색 계산, 업데이트
+        // 배경, 글자 색 계산, 업데이트
         let rate = 0;
         if (zPos < MaxCoordZ / 2.0) {
 
             rate = Math.sin(zPos * Math.PI * 2 / MaxCoordZ);
         }
-        scene.background = new THREE.Color(mixColor(
+        const backgroundColor = mixColor(
             Pallete.Sky.Day,
             Pallete.Sky.Night,
             rate
-        ));
+        );
+        const foregroundColor = mixColor(
+            Pallete.Sky.Night,
+            Pallete.Sky.Day,
+            rate
+        );
+        scene.background = new THREE.Color(backgroundColor);
+        scoreText.style.color = getTransparentColorString(foregroundColor);
 
         // 충돌 검사를 통해 게임 오버를 감지한다
         if (robot.model && obstacles.children.length) { // 게임이 준비되면 검사한다
@@ -606,6 +639,7 @@ onUpdate = function (deltaTime) {
             const playerBox = new THREE.Box3().setFromObject(robot.model);
             const obstacleBox = new THREE.Box3().setFromObject(obstacles.children[0]);
             const hit = playerBox.intersectsBox(obstacleBox);
+            
 
             if (hit) { // 충돌이 있다면
 
@@ -620,6 +654,9 @@ onUpdate = function (deltaTime) {
                 gameOverCount = 0; // 횟수를 리셋한다.
             }
         }
+
+        // 현재 점수를 출력한다.
+        scoreText.textContent = "Score: " + calculateScore();
     }
 };
 
