@@ -53,29 +53,37 @@
 <h3> Install </h3>
 <p>If you want to install and run this project locally, there are two ways.</p>
 
-<h5> Using Github, http-server </h5>
+<h4> Using Github, http-server </h4>
 <p>It is a method that downloads projects through Github and executes them through http-server.</p>
 <p>To install http-server:</p>
+
 ```
 npm install http-server -g
 ```
+
 <p>To run (from Roborun directory):</p>
+
 ```
 http-server . -p 8000
 ```
+
 <p>If you connect to 127.0.0.1:8000, you can play Roborun game.</p>
 
 <br>
-<h5> Using docker </h5>
+<h4> Using docker </h4>
 <p>The Roborun project is implemented as a web project using express.js and distributed as a docker file.</p>
-To get docker image:
+<p>To get docker image:</p>
+
 ```
 docker pull tree9295/roborun
 ```
-To run:
+
+<p>To run:</p>
+
 ```
 docker run -p 8000:3000 -d tree9295/roborun
 ```
+
 <p>If you connect to 127.0.0.1:8000, you can play Roborun game.</p>
 
 <br>
