@@ -283,7 +283,7 @@ onInit = function (done) {
     const proms = [
         // Robot
         loadGLB(
-            "../obj/robot.glb",
+            "https://github.com/nda111/Chromiosaurus/raw/master/obj/robot.glb",
             function (gltf) {
 
                 robot.model = gltf.scene;
@@ -301,8 +301,8 @@ onInit = function (done) {
 
         // Cactus
         loadObject(
-            "../obj/cactus/model.obj",
-            "../obj/cactus/textures/SmallCactus4_default_albedo.jpeg",
+            "https://github.com/nda111/Chromiosaurus/raw/master/obj/cactus/model.obj",
+            "https://github.com/nda111/Chromiosaurus/raw/master/obj/cactus/textures/SmallCactus4_default_albedo.jpeg",
             function (object) {
 
                 const scale = 3.5;
@@ -317,8 +317,8 @@ onInit = function (done) {
 
         // Rocks
         loadObject(
-            "../obj/rock2/RockPackByPava.obj",
-            "../obj/rock2/GreyRockTexture.png",
+            "https://github.com/nda111/Chromiosaurus/raw/master/obj/rock2/RockPackByPava.obj",
+            "https://github.com/nda111/Chromiosaurus/raw/master/obj/rock2/GreyRockTexture.png",
             function (object) {
 
                 const s = 3.0;
