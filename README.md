@@ -35,17 +35,17 @@
 <br>
 <h3> Game </h3>
 <p align="center"><img width="1741" alt="3d" src="https://user-images.githubusercontent.com/37873745/100439203-92e49f80-30e6-11eb-8618-3586a4cf01b3.png"></p>
-<h5> 3D scene </h5>
+<h4> 3D scene </h4>
 <p>Roborun expressed 2D objects in the existing Chrome dinosaur games as 3D objects.</p>
 <p>As the name Roborun suggests, we used robot characters, not dinosaur characters.</p>
 <p>In addition, cactus, which used to be existing obstacles, was diversified into 3D stone and cactus to form obstacles randomly.</p>
 <p>The background is also composed of 3D in the existing 2D configuration, expressing the robot character running.</p>
 
-<h5> Key board </h5>
+<h4> Key board </h4>
 <p>When the game starts for the first time, it starts by clicking on the keyboard.</p>
 <p>When you enter the game, you can make the robot jump through the space bar, which avoids obstacles.</p>
 
-<h5> Score </h5>
+<h4> Score </h4>
 <p>When the game starts, the score continues to increase in proportion to time.</p>
 <p>If the robot fails to avoid obstacles, the game is over and the score increase stops, resulting in the final score being printed.</p>
 
