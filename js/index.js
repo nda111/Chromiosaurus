@@ -194,7 +194,9 @@ onresize = function () {
     if (renderer != undefined) {
 
         renderer.setSize(window.innerWidth, window.innerWidth * CanvasSizeRate);
-    }
+    }        
+    gameoverText.style.top = (renderer.domElement.clientHeight - gameoverText.clientHeight) / 2 + "px";
+
 };
 
 /**
@@ -463,13 +465,13 @@ onInit = function (done) {
 
         // gameoverText
         gameoverText = document.getElementById("gameover-text");
-        gameoverText.style.top = (renderer.domElement.clientHeight - gameoverText.clientHeight) / 2 + "px";
 
         // retryButton
         retryButton = document.getElementById("retry-button");
         retryButton.onclick = onRetry;
         
         // Finalize the promise
+        onresize();
         done();
     });
 };
