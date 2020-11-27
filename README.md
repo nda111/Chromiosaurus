@@ -9,9 +9,10 @@
 <img alt="MIT License" src="https://img.shields.io/badge/license-MIT-blue"/>
 </p>
 <br>
-<p align="center">
-<iframe width="896" height="379" src="https://www.youtube.com/embed/vUzWBIOjoKA"></iframe>
-</p>
+<div align="center">
+    <a href="https://youtu.be/vUzWBIOjoKA"><img alt = "roborun" src="https://user-images.githubusercontent.com/37873745/100441701-41d6aa80-30ea-11eb-95fe-80c81539201c.png"></a>
+</div>
+
 <p align="center"><a href="http://52.78.27.117:3000">Click here to start the game.</a></p>
 
 <hr>
